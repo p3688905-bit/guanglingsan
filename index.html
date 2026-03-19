@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>嵇康傳奇：廣陵絕響</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Serif TC', serif;
+            background-color: #050505;
+            color: #e2e8f0;
+            overflow: hidden;
+            user-select: none;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            transition: background-image 1.5s ease-in-out, background-color 1.5s ease-in-out;
+        }
+
+        .bg-gradient-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, rgba(5,5,5,0.2) 0%, rgba(5,5,5,0.95) 100%);
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        #dialogue-box {
+            position: absolute;
+            bottom: 4%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 85%;
+            height: 32vh;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid #334155;
+            border-top: 2px solid #94a3b8;
+            border-radius: 4px;
+            padding: 2.5rem 3.5rem;
+            z-index: 20;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.9);
+            display: none;
+            cursor: pointer;
+        }
+
+        #speaker-name {
+            font-size: 1.7rem;
+            font-weight: bold;
+            letter-spacing: 3px;
+            margin-bottom: 1.2rem;
+            display: inline-block;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.9);
+        }
+
+        #dialogue-text {
+            font-size: 1.4rem;
+            line-height: 2;
+            color: #f8fafc;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.9);
+            min-height: 90px;
+        }
+
+        .thought-text { color: #93c5fd; font-style: italic; }
+        .quote-text { color: #fde047; font-weight: bold; }
+
+        #choices-container {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 75%;
+            max-width: 850px;
+            z-index: 30;
+            display: none;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .choice-btn {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid #475569;
+            color: #f1f5f9;
+            padding: 1.2rem 2.5rem;
+            font-size: 1.35rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+        }
+
+        .choice-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+            transition: left 0.7s;
+        }
+
+        .choice-btn:hover::before { left: 100%; }
+        .choice-btn:hover {
+            background: #1e293b;
+            border-color: #cbd5e1;
+            color: #ffffff;
+            transform: translateX(12px);
+            box-shadow: -8px 8px 20px rgba(0,0,0,0.6);
+        }
+
+        #title-screen {
+            position: absolute;
+            inset: 0;
+            background-color: #0f172a;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+        }
+        #title-screen::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(30,41,59,0.5) 0%, rgba(2,6,23,0.9) 100%);
+            z-index: -1;
+        }
+
+        .fade-in { animation: fadeIn 1s forwards; }
+        .fade-out { animation: fadeOut 1s forwards; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+        #character-sprite {
+            position: absolute;
+            bottom: 32vh;
+            left: 50%;
+            transform: translateX(-50%);
+            max-height: 75vh;
+            width: auto;
+            z-index: 15;
+            transition: opacity 0.6s ease, filter 0.6s ease;
+            display: none;
+            pointer-events: none;
+            filter: drop-shadow(0 0 25px rgba(0,0,0,0.9));
+        }
+
+        #screen-flash {
+            position: absolute;
+            inset: 0;
+            background: white;
+            z-index: 99;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .flash-anim { animation: flash 0.8s ease-out; }
+        @keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="title-screen">
+        <h1 class="text-7xl font-bold mb-6 tracking-[0.4em] text-transparent bg-clip-text bg-gradient-to-r from-gray-300 to-gray-600 drop-shadow-2xl">廣陵絕響</h1>
+        <h2 class="text-2xl mb-16 text-gray-400 tracking-widest">魏晉名士・世說新語典藏版</h2>
+        <button onclick="startGame()" class="px-12 py-4 bg-transparent border border-gray-500 hover:border-gray-200 hover:text-white text-gray-400 rounded-sm uppercase tracking-[0.5em] text-xl transition-all duration-500">
+            入 局
+        </button>
+    </div>
+
+    <div class="bg-gradient-overlay"></div>
+    <div id="screen-flash"></div>
+    <img id="character-sprite" src="" alt="角色立繪">
+
+    <div id="dialogue-box" onclick="advanceStory()">
+        <div id="speaker-name"></div>
+        <div id="dialogue-text"></div>
+        <div class="absolute bottom-5 right-8 text-gray-500 text-sm animate-pulse tracking-widest">點擊繼續</div>
+    </div>
+    
+    <div id="choices-container"></div>
+</div>
+
+<script>
+    let gameState = { dao: 0, worldly: 0, trustShanTao: false };
+
+    // ======================================================================
+    // 🌄 【場景背景圖床設定區】
+    // ======================================================================
+    const backgrounds = {
+        title:    "https://i.postimg.cc/ry4vn9KJ/遊戲標題.png",    
+        intro:    "https://i.postimg.cc/X70tTy5j/洛陽遠景.png",
+        mountain: "https://i.postimg.cc/B6YzzKMJ/深山採藥.png",    
+        huayang:  "https://i.postimg.cc/m2GK0F9Z/華陽亭夜景.png", // ★ 新增：華陽亭場景
+        forge:    "https://i.postimg.cc/fT0PHkXQ/大樹下打鐵.png",    
+        bamboo:   "https://i.postimg.cc/KvgW94LG/竹林七賢聚會.png",    
+        study:    "https://i.postimg.cc/65NFDGZ7/嵇康書房.png", 
+        prison:   "https://i.postimg.cc/SNzPZj8q/洛陽死牢.png",    
+        execution:"https://i.postimg.cc/ZKyQf03R/洛陽東市刑場.png",  
+        ending:   "https://i.postimg.cc/yYz2wSRB/歷史書卷.png" 
+    };
+
+    document.getElementById('title-screen').style.backgroundImage = `url('${backgrounds.title}')`;
+
+    // ======================================================================
+    // 🎭 【角色立繪圖床設定區】
+    // ======================================================================
+    const sprites = {
+        jiKang_calm:  "https://i.postimg.cc/xdPhK7mL/嵇康平靜.png",   
+        jiKang_angry: "https://i.postimg.cc/cH9zznXZ/嵇康生氣.png",   
+        jiKang_drunk: "https://i.postimg.cc/wvfrrmFC/嵇康微醺.png",   
+        zhongHui:     "https://i.postimg.cc/C1P22qmy/鍾會.png",   
+        shanTao:      "https://i.postimg.cc/QtxPSbks/山濤.png",      
+        wife:         "https://i.postimg.cc/PqM9mcD2/長樂亭主.png",    
+        jiShao:       "https://i.postimg.cc/cJc2Qj3M/嵇紹.png",   
+        simaZhao:     "https://i.postimg.cc/D01HS7tD/司馬昭.png", 
+        luAn:         "https://i.postimg.cc/1XD28yLY/呂安.png",  
+        yuanXiaoni:   "https://i.postimg.cc/02dhx2Gy/袁孝尼.png",
+        jiKang_qin:   "https://i.postimg.cc/T1nFKTZF/嵇康彈琴.png",
+        ghost:        "https://i.postimg.cc/br1WZqK5/鬼.png", // ★ 新增：華陽亭幽魂立繪
+        empty: ""     
+    };
+
+    // ======================================================================
+    // 📖 【劇本與演出控制設定】
+    // ======================================================================
+    const storyData = {
+        start: [
+            { bgImg: backgrounds.intro, bg: "#020617", sprite: sprites.empty, speaker: "旁白", text: "魏晉之際，天下擾攘。名教與自然，權力與生死，交織成一張無形的網。" },
+            { bgImg: backgrounds.mountain, bg: "#022c22", sprite: sprites.empty, speaker: "旁白", text: "汲泉鑪丹，採藥山澤。你，嵇康，字叔夜。正獨自一人在深山中採集靈芝與草藥。" },
+            { sprite: sprites.jiKang_calm, speaker: "旁白", text: "你身長七尺八寸，面容俊美。即使只是隨意披著粗布衣裳，山中的樵夫童子見到你，都驚為天人。" },
+            { speaker: "樵童", text: "（指著你驚呼）快看！那裡有一位神仙！" },
+            { speaker: "旁白", text: "《世說新語・容止》載：「<span class='quote-text'>樵童牧豎，皆以為神仙。</span>」你對世俗的名利毫無興趣，日日鑽研《養生論》。" },
+            { choice: [
+                { text: "「形神共養，不營名位，這才是我輩的歸宿。」（下山遊歷）", target: "huayang_pavilion", action: () => gameState.dao++ },
+                { text: "「雖愛山林，但我畢竟娶了曹氏宗親，去洛陽周邊散散心吧。」", target: "huayang_pavilion", action: () => gameState.worldly++ }
+            ]}
+        ],
+        // ==========================================================
+        // ★ 新增：華陽亭遇鬼授琴劇情
+        // ==========================================================
+        huayang_pavilion: [
+            { bgImg: backgrounds.huayang, bg: "#0f172a", sprite: sprites.empty, speaker: "旁白", text: "你神情高邁，任心遊憩。這次你向西南遊歷，距離洛陽數十里外，來到一座名為「華陽」的孤亭投宿。" },
+            { speaker: "旁白", text: "夜了無人，獨在亭中。傳聞此亭由來殺人，宿者多凶；但你心神蕭散，了無懼意。" },
+            { sprite: sprites.jiKang_calm, speaker: "旁白", text: "至一更時分，你取出身邊的古琴，先作諸弄，雅聲逸奏。" },
+            { sprite: sprites.empty, speaker: "神秘聲音", text: "（從虛空中傳來，空靈而悠遠）……善！" },
+            { sprite: sprites.jiKang_angry, speaker: "嵇康", text: "（撫琴而呼）君是何人？" },
+            { sprite: sprites.ghost, speaker: "幽魂", text: "身是故人，幽沒於此數千年矣……聞君彈琴，音曲清和，昔所好，故來聽耳。" },
+            { speaker: "幽魂", text: "身不幸非理就終，形體殘毀，不宜接見君子；然愛君之琴，要當相見，君勿怪惡之。君可更作數曲？" },
+            { choice: [
+                { text: "「夜已久，何不來也？形骸之間，復何足計！」", target: "huayang_learn_qin" }
+            ]}
+        ],
+        huayang_learn_qin: [
+            { sprite: sprites.ghost, speaker: "旁白", text: "話音剛落，幽魂竟現出了身形——只見他手挈其頭（用手提著自己的頭顱），緩步向你走來。" },
+            { sprite: sprites.ghost, speaker: "幽魂", text: "聞君奏琴，不覺心開神悟，怳若蹔生。" },
+            { sprite: sprites.empty, speaker: "旁白", text: "面對如此詭異的景象，你毫不畏懼，反而視其為知音，遂與共論音聲之趣，辭甚清辯。" },
+            { sprite: sprites.ghost, speaker: "幽魂", text: "君試以琴見與。（能否將琴借我一試？）" },
+            { sprite: sprites.jiKang_calm, speaker: "旁白", text: "你於是將古琴授之。幽魂既彈眾曲，亦不出常；然而隨後指法一變——" },
+            { speaker: "旁白", text: "一陣慷慨激昂、金戈鐵馬之聲傾瀉而出，其聲調絕倫，震懾人心！" },
+            { speaker: "嵇康", text: "（大驚且喜）這曲子……！" },
+            { speaker: "旁白", text: "這正是日後震驚天下的神曲——〈廣陵散〉。你憑藉極高的音樂天賦，纔從受之，半夕悉得。" },
+            { sprite: sprites.empty, speaker: "旁白", text: "天將明時，幽魂向你拜別，消失於晨霧之中。而你，帶著這首千古絕唱，回到了洛陽近郊。" },
+            { action: "goto", target: "forge_scene" }
+        ],
+        // ==========================================================
+        forge_scene: [
+            { bgImg: backgrounds.forge, bg: "#1e293b", sprite: sprites.empty, speaker: "旁白", text: "回到家中，為了避世，你終日在大樹下與向秀打鐵為樂。" },
+            { sprite: sprites.zhongHui, speaker: "旁白", text: "這日，司馬昭的心腹鍾會，帶著浩蕩的車馬與名士前來拜訪。鍾會極富才機，他來，是為了試探你的政治立場。" },
+            { sprite: sprites.jiKang_angry, speaker: "旁白", text: "你深知鍾會代表著篡魏的司馬氏。面對他華麗的陣仗與問候，你決定：" },
+            { choice: [
+                { text: "揚槌不輟，旁若無人，視之為空氣。", target: "zhonghui_ignore", action: () => gameState.dao += 2 },
+                { text: "放下鐵鎚，虛與委蛇地寒暄。", target: "zhonghui_greet", action: () => gameState.worldly += 2 }
+            ]}
+        ],
+        zhonghui_ignore: [
+            { sprite: sprites.zhongHui, speaker: "鍾會", text: "（備受屈辱，咬牙切齒）...既然嵇中散如此繁忙，告辭！" },
+            { sprite: sprites.jiKang_angry, speaker: "嵇康", text: "何所聞而來？何所見而去？" },
+            { sprite: sprites.zhongHui, speaker: "鍾會", text: "聞所聞而來，見所見而去！" },
+            { sprite: sprites.empty, speaker: "旁白", text: "《世說新語・簡傲》記下了這一幕。你保全了傲骨，卻也為自己埋下了殺身之禍。" },
+            { action: "goto", target: "bamboo_scene" }
+        ],
+        zhonghui_greet: [
+            { sprite: sprites.zhongHui, speaker: "旁白", text: "你選擇了妥協。鍾會大喜，向司馬昭舉薦了你。" },
+            { sprite: sprites.jiKang_calm, speaker: "嵇康", text: "<span class='thought-text'>我終究還是違背了「不營名位以保神」的初衷...</span>" },
+            { sprite: sprites.empty, speaker: "系統", text: "【結局：泯然眾人】你失去了魏晉名士的風度，成為了司馬氏政權下的一枚棋子。苟全性命，卻失去了靈魂。" },
+            { choice: [{ text: "時光倒流，重塑傲骨", target: "start", action: () => { gameState.dao=0; gameState.worldly=0; } }] }
+        ],
+        bamboo_scene: [
+            { bgImg: backgrounds.bamboo, bg: "#064e3b", sprite: sprites.empty, speaker: "旁白", text: "竹林之下，你與山濤（巨源）、阮籍等人飲酒撫琴，世稱「竹林七賢」。" },
+            { sprite: sprites.jiKang_drunk, speaker: "旁白", text: "你飲得微醺，斜倚在竹榻上。微風拂過，你的神態從容不迫，毫無造作之態。" },
+            { sprite: sprites.shanTao, speaker: "山濤", text: "（望著你，對旁人感嘆）叔夜之為人也，<span class='quote-text'>巖巖若孤松之獨立；其醉也，傀俄若玉山之將崩。</span>" },
+            { speaker: "旁白", text: "山濤極度欣賞你的才華與氣質，但他也是個入世的人。不久後，山濤將要升官，他上書司馬昭，想舉薦你接替他「吏部郎」的位置。" },
+            { sprite: sprites.jiKang_angry, speaker: "旁白", text: "你深知，這是司馬氏逼迫你表態的手段。若不合作，便是敵人。你要如何回應這位懂你、卻又逼你的知己？" },
+            { choice: [
+                { text: "寫下《與山巨源絕交書》，痛罵其虛偽，徹底斷絕關係！", target: "write_letter_angry", action: () => { gameState.dao++; gameState.trustShanTao = false; } },
+                { text: "寫下《與山巨源絕交書》，表面痛罵，實則為山濤撇清與自己的關係。", target: "write_letter_protect", action: () => { gameState.dao++; gameState.trustShanTao = true; } }
+            ]}
+        ],
+        write_letter_angry: [
+            { sprite: sprites.jiKang_angry, speaker: "嵇康", text: "「非湯武而薄周孔！」你我道不同，不相為謀。從此恩斷義絕！" },
+            { action: "goto", target: "luan_incident" }
+        ],
+        write_letter_protect: [
+            { sprite: sprites.jiKang_calm, speaker: "嵇康", text: "<span class='thought-text'>巨源，我若不嚴詞拒絕並與你絕交，日後我若罹難，必定會牽連到你...這篇絕交書，是我對你最後的保護。</span>" },
+            { sprite: sprites.empty, speaker: "旁白", text: "你寫下了狂放的絕交書，公開拒絕出仕。這封信不僅斷絕了來往，也徹底激怒了司馬昭。" },
+            { action: "goto", target: "luan_incident" }
+        ],
+        luan_incident: [
+            { bgImg: backgrounds.study, bg: "#451a03", sprite: sprites.luAn, speaker: "呂安", text: "（獄中傳來的血書）叔夜，我被兄長誣陷不孝，面臨死罪。放眼天下，唯有你能懂我、救我！" },
+            { sprite: sprites.empty, speaker: "旁白", text: "你知道，一旦出面作證，鍾會必然趁機落井下石。但為了信義，你毅然挺身而出，為好友呂安申冤。" },
+            { sprite: sprites.zhongHui, speaker: "鍾會", text: "（向司馬昭進言）主公！嵇康言論放蕩，非毀典謨。今不誅，無以清潔王道！" },
+            { sprite: sprites.simaZhao, speaker: "司馬昭", text: "（冷酷地揮手）既然如此，嵇康與呂安，皆斬。" },
+            { action: "goto", target: "prison_scene" }
+        ],
+        prison_scene: [
+            { bgImg: backgrounds.prison, bg: "#0f0f0f", sprite: sprites.empty, speaker: "旁白", text: "死牢之內，陰冷潮濕。行刑的前夕，你的妻子長樂亭主，牽著你們十歲的兒子嵇紹，前來見你最後一面。" },
+            { sprite: sprites.wife, speaker: "長樂亭主", text: "（淚如雨下）叔夜...你這一去，留下這孤兒寡母，我們該如何是好？" },
+            { sprite: sprites.jiShao, speaker: "嵇紹", text: "（稚氣而恐懼地拉著你的衣袖）父親..." },
+            { sprite: sprites.jiKang_calm, speaker: "旁白", text: "你平靜地撫摸著兒子的頭。這時，你的腦海中浮現出了一個人的名字——那個被你寫信公開痛罵、絕交的山濤（巨源）。" },
+            { choice: [
+                { text: "對兒子說：「你去找山濤伯伯。」", target: "trust_shantao_check" }
+            ]}
+        ],
+        trust_shantao_check: [
+            { action: "evaluate_trust" }
+        ],
+        trust_shantao_success: [
+            { sprite: sprites.jiKang_calm, speaker: "嵇康", text: "（看著十歲的兒子，語氣堅定而溫柔）孩子，別怕。" },
+            { speaker: "嵇康", text: "「<span class='quote-text'>巨源在，汝不孤矣。</span>」" },
+            { sprite: sprites.empty, speaker: "旁白", text: "（只要山濤巨源在世一天，你就不會是孤兒。）" },
+            { speaker: "旁白", text: "《晉書》載，你將兒子託付給了被你「絕交」的山濤。而山濤果真不負所託，將嵇紹視如己出，撫養成人，甚至舉薦他入朝為官。" },
+            { speaker: "旁白", text: "這份跨越生死、超越表面絕交的深刻信任，成為了中國文化史上最動人的知己之情。" },
+            { action: "goto", target: "execution_day" }
+        ],
+        execution_day: [
+            { bgImg: backgrounds.execution, bg: "#7f1d1d", sprite: sprites.empty, speaker: "旁白", text: "景元三年。洛陽東市刑場。夕陽如血。" },
+            { speaker: "官員", text: "報——！太學生三千人聯名跪於闕下，請求拜嵇康為師，懇請朝廷免其一死！" },
+            { sprite: sprites.simaZhao, speaker: "司馬昭", text: "（傳遞聖意）請以為師？荒唐！不許！時辰已到，即刻行刑！" },
+            { sprite: sprites.jiKang_calm, speaker: "旁白", text: "《世說新語・雅量》載：「<span class='quote-text'>嵇中散臨刑東市，神氣不變。</span>」你看了看日影，距離行刑還有一點時間。" },
+            { choice: [
+                { text: "「取我琴來。」", target: "play_qin" }
+            ]}
+        ],
+        play_qin: [
+            { sprite: sprites.jiKang_qin, speaker: "旁白", text: "你端坐於刑場之上，索琴彈之。奏起的，正是當年華陽亭幽魂所授、氣勢磅礴的〈廣陵散〉。" },
+            { speaker: "旁白", text: "琴聲激昂，似有金戈鐵馬之聲。你用音樂，證明了「聲無哀樂」，證明了超越生死的從容。全場三千學子鴉雀無聲。" },
+            { sprite: sprites.empty, speaker: "旁白", text: "一曲終了。你輕輕撫平琴弦，發出了最後的嘆息。" },
+            { sprite: sprites.yuanXiaoni, speaker: "袁孝尼", text: "（回憶中的聲音迴蕩）嵇中散，晚輩懇求您傳授〈廣陵散〉……" },
+            { sprite: sprites.jiKang_calm, speaker: "嵇康", text: "袁孝尼曾經請求我教他這首曲子，吾靳固不與..." },
+            { sprite: sprites.jiKang_angry, speaker: "嵇康", text: "「<span class='quote-text'>〈廣陵散〉於今絕矣！</span>」" },
+            { action: "flash_and_end" }
+        ],
+        true_ending: [
+            { bgImg: backgrounds.ending, bg: "#000000", sprite: sprites.empty, speaker: "旁白", text: "屠刀落下。一代名士，就此隕落。" },
+            { speaker: "旁白", text: "你死後，司馬昭亦感後悔。而你那「玉山將崩」的容止、「巨源在」的深情，以及〈廣陵散〉的絕響，皆被載入《世說新語》。" },
+            { speaker: "旁白", text: "你用生命完成了一件最完美的藝術品——那是對信念的堅守，也是魏晉風度永恆的象徵。" },
+            { speaker: "系統", text: "【歷史真結局：世說新語・廣陵絕響】感謝您的遊玩。" },
+            { choice: [{ text: "千古傳唱 (回到標題)", target: "title", action: () => location.reload() }] }
+        ]
+    };
+
+    let currentNode = "start";
+    let currentLineIndex = 0;
+    
+    const gameContainer = document.getElementById('game-container');
+    const dialogueBox = document.getElementById('dialogue-box');
+    const speakerName = document.getElementById('speaker-name');
+    const dialogueText = document.getElementById('dialogue-text');
+    const choicesContainer = document.getElementById('choices-container');
+    const titleScreen = document.getElementById('title-screen');
+    const charSprite = document.getElementById('character-sprite');
+    const screenFlash = document.getElementById('screen-flash');
+
+    function startGame() {
+        titleScreen.classList.add('fade-out');
+        setTimeout(() => {
+            titleScreen.style.display = 'none';
+            dialogueBox.style.display = 'block';
+            currentNode = "start";
+            currentLineIndex = 0;
+            gameState = { dao: 0, worldly: 0, trustShanTao: false };
+            renderLine();
+        }, 1000);
+    }
+
+    function renderLine() {
+        const nodeData = storyData[currentNode];
+        if (currentLineIndex >= nodeData.length) return;
+        const line = nodeData[currentLineIndex];
+
+        if (line.action === "evaluate_trust") {
+            if (gameState.trustShanTao) {
+                currentNode = "trust_shantao_success";
+            } else {
+                dialogueText.innerHTML = "（你嘆了口氣）<br><span class='thought-text'>我雖寫信痛罵巨源，但滿朝文武，唯有他真正懂我，且為人寬厚。</span>";
+                currentNode = "trust_shantao_success"; 
+            }
+            currentLineIndex = 0;
+            setTimeout(() => { isTyping = false; dialogueBox.onclick = advanceStory; }, 500);
+            return;
+        }
+
+        if (line.action === "flash_and_end") {
+            screenFlash.classList.add('flash-anim');
+            setTimeout(() => {
+                screenFlash.classList.remove('flash-anim');
+                currentNode = "true_ending";
+                currentLineIndex = 0;
+                renderLine();
+            }, 800);
+            return;
+        }
+
+        if (line.action === "goto") {
+            currentNode = line.target;
+            currentLineIndex = 0;
+            renderLine();
+            return;
+        }
+
+        if (line.bgImg !== undefined) {
+            if (line.bgImg === "") {
+                gameContainer.style.backgroundImage = 'none';
+            } else {
+                gameContainer.style.backgroundImage = `url('${line.bgImg}')`;
+            }
+        }
+        if (line.bg) {
+            gameContainer.style.backgroundColor = line.bg;
+        }
+        
+        if (line.sprite !== undefined) {
+            if (line.sprite === "") {
+                charSprite.style.display = 'none';
+            } else {
+                charSprite.src = line.sprite;
+                charSprite.style.display = 'block';
+                charSprite.classList.remove('fade-in');
+                void charSprite.offsetWidth;
+                charSprite.classList.add('fade-in');
+            }
+        }
+
+        if (line.choice) {
+            dialogueBox.style.display = 'none';
+            choicesContainer.innerHTML = '';
+            line.choice.forEach(c => {
+                const btn = document.createElement('button');
+                btn.className = 'choice-btn';
+                btn.innerHTML = c.text;
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    if(c.action) c.action();
+                    makeChoice(c.target);
+                };
+                choicesContainer.appendChild(btn);
+            });
+            choicesContainer.style.display = 'flex';
+            choicesContainer.classList.add('fade-in');
+            return;
+        }
+
+        speakerName.innerText = line.speaker;
+        
+        if(line.speaker === '嵇康') speakerName.style.color = '#60a5fa'; 
+        else if(line.speaker === '旁白') speakerName.style.color = '#94a3b8'; 
+        else if(line.speaker === '系統') speakerName.style.color = '#f87171'; 
+        else if(line.speaker === '司馬昭') speakerName.style.color = '#f87171'; 
+        else if(line.speaker === '呂安') speakerName.style.color = '#fbbf24';  
+        else if(line.speaker === '袁孝尼') speakerName.style.color = '#a78bfa';
+        else if(line.speaker === '幽魂' || line.speaker === '神秘聲音') speakerName.style.color = '#a3e635'; // 幽魂特別使用陰森的螢光綠
+        else speakerName.style.color = '#fde047'; 
+
+        dialogueText.innerHTML = '';
+        typeWriter(line.text, 0);
+    }
+
+    let typeTimer = null;
+    let isTyping = false;
+    let currentFullText = "";
+
+    function typeWriter(text, i) {
+        if (i === 0) {
+            isTyping = true;
+            currentFullText = text;
+            if(typeTimer) clearTimeout(typeTimer);
+        }
+
+        if (i < text.length) {
+            if (text.charAt(i) === '<') {
+                let tag = "";
+                while (text.charAt(i) !== '>' && i < text.length) {
+                    tag += text.charAt(i);
+                    i++;
+                }
+                tag += '>';
+                dialogueText.innerHTML += tag;
+            } else {
+                dialogueText.innerHTML += text.charAt(i);
+            }
+            typeTimer = setTimeout(() => typeWriter(text, i + 1), 35);
+        } else {
+            isTyping = false;
+        }
+    }
+
+    function advanceStory() {
+        if (isTyping) {
+            clearTimeout(typeTimer);
+            dialogueText.innerHTML = currentFullText;
+            isTyping = false;
+            return;
+        }
+
+        const nodeData = storyData[currentNode];
+        if (currentLineIndex < nodeData.length - 1) {
+            currentLineIndex++;
+            renderLine();
+        }
+    }
+
+    function makeChoice(target) {
+        if (target === 'title') return; 
+        choicesContainer.style.display = 'none';
+        dialogueBox.style.display = 'block';
+        currentNode = target;
+        currentLineIndex = 0;
+        renderLine();
+    }
+</script>
+</body>
+</html>
